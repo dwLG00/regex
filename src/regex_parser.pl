@@ -7,15 +7,27 @@
 :- use_module(library(list_util)).
 
 % matching regex
-re_match(Regex, Xs) :- call(Regex, Xs, _, []).
+re_match(Regex, Xs) :-
+    listify(Xs, Xs2),
+    call(Regex, Xs2, _, []).
 
 re_match_any(Regex, Xs) :- % matches any portion of the text
-    append(_, Rest, Xs),
+    listify(Xs, Xs2),
+    append(_, Rest, Xs2),
     call(Regex, Rest, _, _).
 
 re_cut(Regex, Xs, Before, After) :-
-    append(Before, Rest, Xs),
-    call(Regex, Rest, _, After).
+    listify(Xs, Xs2),
+    append(Before1, Rest, Xs2),
+    call(Regex, Rest, _, After1),
+    (
+        Xs \= Xs2 -> (
+            stringify(Before1, Before),
+            stringify(After1, After)
+        );
+        Before = Before1,
+        After = After1
+    ).
 
 re_split(Regex, Xs, SplitValues) :-
     re_cut(Regex, Xs, Before, After) -> (
@@ -32,6 +44,10 @@ re_compile([], parse_nothing).
 re_compile(Xs, Regex) :-
     compile_aux(Xs, RevStack, [], []),
     combine_terms(RevStack, Regex).
+re_compile(String, Regex) :-
+    string(String),
+    listify(String, List),
+    re_compile(List, Regex).
 
 compile_aux([], [], _, []).
 compile_aux([')'|Rest], [], _, Rest).
@@ -39,20 +55,29 @@ compile_aux([X|Xs], RevStack, Stack, Rest) :-
     X \= ')', (
         X = '*' -> (
             compile_aux(Xs, RevStackRest, [], Rest),
-            RevStackRest = [Head|_],
-            Head \= '*', Head \= '+', Head \= '?',
+            (
+                length(RevStackRest, 0);
+                RevStackRest = [Head|_],
+                Head \= '*', Head \= '+', Head \= '?'
+            ),
             RevStack = ['*'|RevStackRest]
         );
         X = '+' -> (
             compile_aux(Xs, RevStackRest, [], Rest),
-            RevStackRest = [Head|_],
-            Head \= '*', Head \= '+', Head \= '?',
+            (
+                length(RevStackRest, 0);
+                RevStackRest = [Head|_],
+                Head \= '*', Head \= '+', Head \= '?'
+            ),
             RevStack = ['+'|RevStackRest]
         );
         X = '?' -> (
             compile_aux(Xs, RevStackRest, [], Rest),
-            RevStackRest = [Head|_],
-            Head \= '*', Head \= '+', Head \= '?',
+            (
+                length(RevStackRest, 0);
+                RevStackRest = [Head|_],
+                Head \= '*', Head \= '+', Head \= '?'
+            ),
             RevStack = ['?'|RevStackRest]
         );
         X = '|' -> (
@@ -185,3 +210,22 @@ parse_any([X|Xs], [X], Xs).
 parse_end([], [], []).
 
 parse_nothing(Xs, [], Xs). % parse_and(Parse, parse_nothing, Parse); parse_and(parse_nothing, Parse, Parse)
+
+% helper functions
+listify(MaybeString, List) :-
+    string(MaybeString) -> string_to_atoms(MaybeString, List);
+    is_list(MaybeString) -> List = MaybeString;
+    false.
+
+stringify(MaybeList, String) :-
+    string(MaybeList) -> String = MaybeList;
+    is_list(MaybeList) -> atoms_to_string(MaybeList, String);
+    false.
+
+string_to_atoms(String, Atoms) :-
+    string_codes(String, Codes),
+    maplist(char_code, Atoms, Codes).
+
+atoms_to_string(Atoms, String) :-
+    maplist(char_code, Atoms, Codes),
+    string_codes(String, Codes).
