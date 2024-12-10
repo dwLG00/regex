@@ -145,7 +145,7 @@ parse_char(Char, parse_char_aux(Char)).
 parse_char_aux(_, [], _, _) :- false.
 parse_char_aux(Char, [Char|Rest], [Char], Rest).
 
-parse_any([X|Xs], X, Xs).
+parse_any([X|Xs], [X], Xs).
 
 parse_end([], [], []).
 
