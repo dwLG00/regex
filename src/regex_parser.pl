@@ -60,7 +60,7 @@ compile_aux([X|Xs], RevStack, Stack, Rest) :-
             RevStack = ['|'|RevStackRest]
         );
         (
-            (X = '('; X = '.'; char_type(X, alnum)) -> (
+            (X = '('; X = '.'; plain_atom(X)) -> (
                 (
                     X = '(' -> (
                         compile_aux(Xs, ParenParse, [], Rest1),
@@ -71,7 +71,7 @@ compile_aux([X|Xs], RevStack, Stack, Rest) :-
                         Parse = parse_any,
                         compile_aux(Xs, RevStackRest, [Parse|Stack], Rest)
                     );
-                    char_type(X, alnum) -> (
+                    plain_atom(X) -> (
                         parse_char(X, Parse),
                         compile_aux(Xs, RevStackRest, [Parse|Stack], Rest)
                     ); false
@@ -121,6 +121,25 @@ or_chain([X|Xs], Parsed) :-
     N #> 0,
     or_chain(Xs, Parsed1),
     parse_or(X, Parsed1, Parsed).
+
+% non-escape characters
+plain_atom(X) :-
+    char_type(X, alnum);
+    char_type(X, quote);
+    X = '/';
+    X = '_';
+    X = ',';
+    X = '!';
+    X = '@';
+    X = '#';
+    X = '%';
+    X = '&';
+    X = '=';
+    X = '<';
+    X = '>';
+    X = ' ';
+    X = '\n';
+    X = '\t'.
 
 % parser combinator
 
