@@ -122,15 +122,11 @@ parse_or_aux(Parse1, Parse2, Xs, Capture, Rest) :-
 parse_star(Parse, parse_star_aux(Parse)).
 parse_star_aux(_, Xs, [], Xs).
 parse_star_aux(Parse, Xs, Capture, Rest) :-
-    %append(Segment1, Segment2, Xs),
-    %call(Parse, Segment1, Capture1, []),
-    %parse_star_aux(Parse, Segment2, Capture2, Rest),
-    %append(Capture1, Capture2, Capture).
     call(Parse, Xs, Capture1, Rest1),
     parse_star_aux(Parse, Rest1, Capture2, Rest),
     append(Capture1, Capture2, Capture).
 
-parse_plus(Parse, parse_plus(Parse)).
+parse_plus(Parse, parse_plus_aux(Parse)).
 parse_plus_aux(Parse, Xs, Capture, Rest) :- call(Parse, Xs, Capture, Rest).
 parse_plus_aux(Parse, Xs, Capture, Rest) :-
     call(Parse, Xs, Capture1, Rest1),
