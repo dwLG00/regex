@@ -35,30 +35,18 @@ compile_aux([X|Xs], RevStack, Stack, Rest) :-
             RevStackRest = [Head|_],
             Head \= '*', Head \= '+', Head \= '?',
             RevStack = ['*'|RevStackRest]
-            %Stack = [Head|Tail],
-            %parse_star(Head, AugmentedHead),
-            %compile_aux(Xs, RevStackRest, [AugmentedHead|Tail], Rest),
-            %RevStack = [AugmentedHead|RevStackRest]
         );
         X = '+' -> (
             compile_aux(Xs, RevStackRest, [], Rest),
             RevStackRest = [Head|_],
             Head \= '*', Head \= '+', Head \= '?',
             RevStack = ['+'|RevStackRest]
-            %Stack = [Head|Tail],
-            %parse_plus(Head, AugmentedHead),
-            %compile_aux(Xs, RevStackRest, [AugmentedHead|Tail], Rest),
-            %RevStack = [AugmentedHead|RevStackRest]
         );
         X = '?' -> (
             compile_aux(Xs, RevStackRest, [], Rest),
             RevStackRest = [Head|_],
             Head \= '*', Head \= '+', Head \= '?',
             RevStack = ['?'|RevStackRest]
-            %Stack = [Head|Tail],
-            %parse_maybe(Head, AugmentedHead),
-            %compile_aux(Xs, RevStackRest, [AugmentedHead|Tail], Rest),
-            %RevStack = [AugmentedHead|RevStackRest]
         );
         X = '|' -> (
             compile_aux(Xs, RevStackRest, [], Rest),
