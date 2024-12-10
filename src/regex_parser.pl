@@ -17,19 +17,6 @@ compile_aux([], [], _, []).
 compile_aux([')'|Rest], [], _, Rest).
 compile_aux([X|Xs], RevStack, Stack, Rest) :- 
     X \= ')', (
-        X = '(' -> (
-            compile_aux(Xs, ParenParse, [], Rest1),
-            combine_terms(ParenParse, Parse),
-            compile_aux(Rest1, RevStackRest, [], Rest),
-            RevStackRest = [RevStackRestHead|RevStackRestTail],
-            (
-                RevStackRestHead = '*' -> parse_star(Parse, AugParse);
-                RevStackRestHead = '+' -> parse_plus(Parse, AugParse);
-                RevStackRestHead = '?' -> parse_maybe(Parse, AugParse);
-                AugParse = Parse
-            ),
-            RevStack = [AugParse|RevStackRestTail]
-        );
         X = '*' -> (
             compile_aux(Xs, RevStackRest, [], Rest),
             RevStackRest = [Head|_],
@@ -52,29 +39,44 @@ compile_aux([X|Xs], RevStack, Stack, Rest) :-
             compile_aux(Xs, RevStackRest, [], Rest),
             RevStack = ['|'|RevStackRest]
         );
-        char_type(X, alnum) -> (
-            parse_char(X, Parse),
-            compile_aux(Xs, RevStackRest, [Parse|Stack], Rest),
-            length(RevStackRest, RevStackLen),
-            (
-                RevStackLen #> 0 -> (
-                    RevStackRest = [RevStackRestHead|RevStackRestTail],
-                    (
-                        RevStackRestHead = '*' -> (
-                            parse_star(Parse, AugParse),
-                            RevStack = [AugParse|RevStackRestTail]
-                        );
-                        RevStackRestHead = '+' -> (
-                            parse_plus(Parse, AugParse),
-                            RevStack = [AugParse|RevStackRestTail]
-                        );
-                        RevStackRestHead = '?' -> (
-                            parse_maybe(Parse, AugParse),
-                            RevStack = [AugParse|RevStackRestTail]
-                        ); RevStack = [Parse|RevStackRest]
-                    )
-                ); RevStack = [Parse]
-            )
+        (
+            (X = '('; X = '.'; char_type(X, alnum)) -> (
+                (
+                    X = '(' -> (
+                        compile_aux(Xs, ParenParse, [], Rest1),
+                        combine_terms(ParenParse, Parse),
+                        compile_aux(Rest1, RevStackRest, [], Rest)
+                    );
+                    X = '.' -> (
+                        Parse = parse_any,
+                        compile_aux(Xs, RevStackRest, [Parse|Stack], Rest)
+                    );
+                    char_type(X, alnum) -> (
+                        parse_char(X, Parse),
+                        compile_aux(Xs, RevStackRest, [Parse|Stack], Rest)
+                    ); false
+                ),
+                length(RevStackRest, RevStackLen),
+                (
+                    RevStackLen #> 0 -> (
+                        RevStackRest = [RevStackRestHead|RevStackRestTail],
+                        (
+                            RevStackRestHead = '*' -> (
+                                parse_star(Parse, AugParse),
+                                RevStack = [AugParse|RevStackRestTail]
+                            );
+                            RevStackRestHead = '+' -> (
+                                parse_plus(Parse, AugParse),
+                                RevStack = [AugParse|RevStackRestTail]
+                            );
+                            RevStackRestHead = '?' -> (
+                                parse_maybe(Parse, AugParse),
+                                RevStack = [AugParse|RevStackRestTail]
+                            ); RevStack = [Parse|RevStackRest]
+                        )
+                    ); RevStack = [Parse]
+                ); false
+            ); false
         );
         false
     ).
@@ -95,6 +97,8 @@ and_chain([X|Xs], Parsed) :-
 or_chain([], parse_nothing).
 or_chain([X], X).
 or_chain([X|Xs], Parsed) :-
+    length(Xs, N),
+    N #> 0,
     or_chain(Xs, Parsed1),
     parse_or(X, Parsed1, Parsed).
 
@@ -102,9 +106,13 @@ or_chain([X|Xs], Parsed) :-
 
 parse_and(Parse1, Parse2, parse_and_aux(Parse1, Parse2)).
 parse_and_aux(Parse1, Parse2, Xs, Capture, Rest) :-
-    call(Parse1, Xs, Capture1, Rest1),
-    call(Parse2, Rest1, Capture2, Rest),
+    append(Segment1, Segment2, Xs),
+    call(Parse1, Segment1, Capture1, []),
+    call(Parse2, Segment2, Capture2, Rest),
     append(Capture1, Capture2, Capture).
+    %call(Parse1, Xs, Capture1, Rest1),
+    %call(Parse2, Rest1, Capture2, Rest),
+    %append(Capture1, Capture2, Capture).
 
 parse_or(Parse1, Parse2, parse_or_aux(Parse1, Parse2)).
 parse_or_aux(Parse1, Parse2, Xs, Capture, Rest) :-
@@ -114,6 +122,10 @@ parse_or_aux(Parse1, Parse2, Xs, Capture, Rest) :-
 parse_star(Parse, parse_star_aux(Parse)).
 parse_star_aux(_, Xs, [], Xs).
 parse_star_aux(Parse, Xs, Capture, Rest) :-
+    %append(Segment1, Segment2, Xs),
+    %call(Parse, Segment1, Capture1, []),
+    %parse_star_aux(Parse, Segment2, Capture2, Rest),
+    %append(Capture1, Capture2, Capture).
     call(Parse, Xs, Capture1, Rest1),
     parse_star_aux(Parse, Rest1, Capture2, Rest),
     append(Capture1, Capture2, Capture).
@@ -132,6 +144,8 @@ parse_maybe_aux(Parse, Xs, Capture, Rest) :- call(Parse, Xs, Capture, Rest).
 parse_char(Char, parse_char_aux(Char)).
 parse_char_aux(_, [], _, _) :- false.
 parse_char_aux(Char, [Char|Rest], [Char], Rest).
+
+parse_any([X|Xs], X, Xs).
 
 parse_end([], [], []).
 
